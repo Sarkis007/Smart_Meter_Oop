@@ -1,35 +1,81 @@
 import datetime
 
 
-class Meassurment:
-    def __init__(self, utility, place, date, read):
-        self.utility = utility
+class Meassurment(object):
+    def __init__(self, place, date, read):
         self.place = place
         self.date = date
         self.read = read
-
-
-class Node:
-    def __init__(self, data=None):
-        self.data = data
+        self.price = None
+        self.unit = None
+        self.utility = None
         self.next = None
+
+    def getprice(self, data1, data2):
+            if data1.date > data2.date and data1.read > data2.read or data1.date < data2.date and data1.read \
+                    < data2.read:
+                used_amount = abs(int(data1.read - data2.read))
+                from datetime import datetime
+                date_format = "%Y-%m-%d"
+                a = datetime.strptime(data1.date, date_format)
+                b = datetime.strptime(data2.date, date_format)
+                delta = abs(b - a)
+                used_days = delta.days
+                cost = used_amount * self.price
+                print "The amount of", self.utility, "used in", used_days, "days is", \
+                    used_amount, self.unit
+                print "which's cost for", used_days, "days is", cost, "Drams"
+                if used_days > 30:
+                    print "Approximately", int((30 * cost) / used_days), "Drams per month"
+                else:
+                    print "Approximately", int(cost / used_days), "Drams per Day"
+            else:
+                print data1.date + '  -  ', data1.read
+                print data2.date + '  -  ', data2.read
+                if data1.date > data2.date:
+                    print "the usage for " + data2.date + " is bigger than the usage of " + data1.date
+                    print "which makes no sense, please check the readings for the dates"
+                if data1.date < data2.date:
+                    print "the usage for " + data1.date + " is bigger than the usage of " + data2.date
+                    print "which makes no sense, please check the readings for the dates"
+                print "if you want to do other operations select one or exit"
+                return
+
+
+class Gas(Meassurment):
+    def __init__(self, place, date, read):
+        Meassurment.__init__(self, place, date, read)
+
+        self.price = 72
+        self.unit = u'm\u00b3'
+        self.utility = "Gas"
+        self.lenght = None
+
+    def changep(self):
+        self.price = 2222222
+        return
+
+
+class Water(Meassurment):
+    def __init__(self, place, date, read):
+        Meassurment.__init__(self, place, date, read)
+        self.price = 194.3
+        self.unit = u'm\u00b3'
+        self.utility = "Water"
+
+
+class Electricity(Meassurment):
+    def __init__(self, place, date, read):
+        Meassurment.__init__(self,  place, date, read)
+        self.price = 21.3
+        self.unit = 'Kwh'
+        self.utility = "Electricity"
 
 
 class Sm:
 
     def __init__(self):
         self.__head = None
-        self.__GPM = 72
-        self.__WPM = 194.3
-        self.__EPK = 21.32
-
-    def utility_price(self, utility):
-        if utility == 'Gas':
-            return self.__GPM
-        elif utility == 'Water':
-            return self.__WPM
-        elif utility == 'Electricity':
-            return self.__EPK
 
     def date_input(self, sentence):
         now = datetime.datetime.now()
@@ -46,8 +92,23 @@ class Sm:
                 x = self.date_input("The date should be as 'year-mm-dd'")
                 return x
 
-    def input(self, x, y, z):
+    def usage_check(self, utility, place):
+        data_len = self.data_lenght(utility, place)
+        if data_len >= 2:
+            self.display(utility, place)
+            print "Enter any two dates to calculate the usage"
+            date1 = self.date_input("please enter the first date as 'year-mm-dd'")
+            data1 = self.find_data(utility, place, date1)
+            date2 = self.date_input("please enter the second date as 'year-mm-dd'")
+            data2 = self.find_data(utility, place, date2)
+            data2.getprice(data1, data2)
+        else:
+            print "There are ", data_len, " reading" + " for ", utility, " utility"
+            print "There should be at least two readings"
+            return
+        return
 
+    def input(self, x, y, z):
         tmp = raw_input("1 - " + x + '\n' + "2 - " + y + '\n' + "3 - "+z)
         while True:
             if tmp == "1":
@@ -63,7 +124,7 @@ class Sm:
         n = 0
         temp = self.__head
         while temp is not None:
-            if temp.data.utility == utility and temp.data.place == place:
+            if temp.utility == utility and temp.place == place:
                 n += 1
             temp = temp.next
         return n
@@ -81,20 +142,24 @@ class Sm:
                 print "Invalid input, your input should be only numbers"
 
     def sorted_insert(self, measurement):
-        new_measurement = Node(measurement)
         if self.__head is None:
-            self.__head = new_measurement
+            self.__head = measurement
+
         else:
             temp = self.__head
-            while temp.next is not None and temp.next.data.read < new_measurement.data.read:
+            while temp.next is not None:
                 temp = temp.next
-                new_measurement.next = temp.next
-            temp.next = new_measurement
+            temp.next = measurement
 
     def add_measurement(self, utility, place):
         date = self.date_input("please insert the date as year-mm-dd or just type 'today' ")
         read = self.read_input(utility, date, place)
-        measurement = Meassurment(utility, place, date, read)
+        if utility == "Gas":
+            measurement = Gas(place, date, read)
+        elif utility == "Water":
+            measurement = Water(place, date, read)
+        else:
+            measurement = Electricity(place, date, read)
         self.sorted_insert(measurement)
         print "Measurement added successfully"
         return
@@ -103,16 +168,10 @@ class Sm:
         x = False
         temp = self.__head
         while temp is not None:
-            if temp.data.utility == utility and temp.data.place == place and (temp.data.date == date or date is True):
+            if temp.utility == utility and temp.place == place and (temp.date == date or date is True):
                 x = True
             temp = temp.next
         return x
-
-    def utility_unit(self, utility):
-        if utility == 'Gas' or utility == 'Water':
-            return u'm\u00b3'
-        elif utility == 'Electricity':
-            return 'Kwh'
 
     def display(self, utility, place):
         tmp = self.__head
@@ -121,9 +180,8 @@ class Sm:
             print "Saved data for " + utility + " utility for", place, "are the following:"
             n = 1
             while tmp is not None:
-                if tmp.data.utility == utility and tmp.data.place == place:
-                    print str(n) + '- On date: ' + tmp.data.date + '  - reading: ' + str(tmp.data.read),\
-                        self.utility_unit(utility)
+                if tmp.utility == utility and tmp.place == place:
+                    print str(n) + '- On date: ' + tmp.date + '  - reading: ' + str(tmp.read), tmp.unit
                     n = n + 1
                 tmp = tmp.next
 
@@ -135,16 +193,16 @@ class Sm:
     def change_data(self, utility, date, place):
         new_read = self.read_input(utility, date, place)
         temp = self.__head
-        while temp is not None and temp.data.date != date:
+        while temp is not None and temp.date != date:
             temp = temp.next
-        temp.data.read = new_read
+        temp.read = new_read
 
     def delete_data(self, date):
         temp = self.__head
-        if temp.data.date == date:
+        if temp.date == date:
             self.__head = temp.next
         else:
-            while temp is not None and temp.next.data.date != date:
+            while temp is not None and temp.next.date != date:
                 temp = temp.next
             temp.next = temp.next.next
 
@@ -175,74 +233,9 @@ class Sm:
             check = self.check_if_exist(utility, place, date)
         temp = self.__head
         while temp is not None:
-            if temp.data.date == date and temp.data.place == place and temp.data.utility == utility:
-                return temp.data.date, temp.data.read
+            if temp.date == date and temp.place == place and temp.utility == utility:
+                return temp
             temp = temp.next
-
-    def usage_check(self, utility, place):
-        len = self.data_lenght(utility, place)
-        if len >= 2:
-            self.display(utility, place)
-            print "Enter any two dates to calculate the usage"
-            date1 = self.date_input("please enter the first date as 'year-mm-dd'")
-            first_date, first_read = self.find_data(utility, place, date1)
-            date2 = self.date_input("please enter the second date as 'year-mm-dd'")
-            second_date, second_read = self.find_data(utility, place, date2)
-            if first_date > second_date and first_read > second_read or first_date < second_date and first_read \
-                    < second_read:
-                used_amount = abs(int(first_read - second_read))
-                from datetime import datetime
-                date_format = "%Y-%m-%d"
-                a = datetime.strptime(first_date, date_format)
-                b = datetime.strptime(second_date, date_format)
-                delta = abs(b - a)
-                used_days = delta.days
-                cost = used_amount * self.utility_price(utility)
-                print "The amount of", utility, "used in", used_days, "days is", \
-                    used_amount, self.utility_unit(utility)
-                print "which's cost for", used_days, "days is", cost, "Drams"
-                if used_days > 30:
-                    print "Approximately", int((30 * cost) / used_days), "Drams per month"
-                else:
-                    print "Approximately", int(cost / used_days), "Drams per Day"
-            else:
-                print first_date + '  -  ', first_read
-                print second_date + '  -  ', second_read
-                if first_date > second_date:
-                    print "the usage for " + second_date + " is bigger than the usage of " + first_date
-                    print "which makes no sense, please check the readings for the dates"
-                if first_date < second_date:
-                    print "the usage for " + first_date + " is bigger than the usage of " + second_date
-                    print "which makes no sense, please check the readings for the dates"
-                print "if you want to do other operations select one or exit"
-                return
-        else:
-            print "There are ", len, " reading" + " for " + utility + " utility"
-            print "There should be at least two readings"
-            return
-        return
-
-    def change_cost(self,utility):
-        if utility == "Gas":
-            print "Current price for each meter cube is ", self.__GPM
-        elif utility == "Electricity":
-            print "Current price for each kilo Watt per hour is", self.__EPK
-        else:
-            print "Current price for each meter cube is ", self.__WPM
-        while True:
-            try:
-                x = input("Please enter new cost for " + utility)
-                if utility == "Gas":
-                    self.__GPM = x
-                    return
-                elif utility == "Electricity":
-                    self.__EPK = x
-                    return
-                else:
-                    self.__WPM = x
-                    return
-            except:
-                print "Invalid Input, please enter integers"
 
     def start_sm(self):
         while True:
@@ -250,16 +243,17 @@ class Sm:
             print "2- Check your usage"
             print "3- Edit the data"
             print "4- Display data"
-            print "5- Change utility costs"
-            print "6- Exit"
+            print "5- Exit"
             x = raw_input()
+            utility = ""
+            place = ""
             if x == "1" or x == "2" or x == "3" or x == "4":
                 print "please select one of the following utilities"
                 utility = self.input("Electricity", "Water", "Gas")
                 print "please select one of the following places"
                 place = self.input("Home", "Work", "Other")
             if x == '1':
-                self.add_measurement(utility ,place)
+                self.add_measurement(utility, place)
             elif x == '2':
                 self.usage_check(utility, place)
             elif x == '3':
@@ -267,10 +261,6 @@ class Sm:
             elif x == '4':
                 self.display(utility, place)
             elif x == '5':
-                print "please select one of the following utilities"
-                utility = self.input("Electricity", "Water", "Gas")
-                self.change_cost(utility)
-            elif x == '6':
                 print "Thank you sir"
                 print "Have a nice day"
                 exit()
@@ -281,11 +271,11 @@ class Sm:
 
 def main():
     my_sm = Sm()
-    measurement1 = Meassurment("Water", "Home", "1999-12-12", 11111)
-    measurement2 = Meassurment("d", "Home", "2012-12-12", 26444)
-    measurement3 = Meassurment("Water", "Work", "2013-12-12", 33333)
-    measurement4 = Meassurment("Electricity", "Other", "2013-12-12", 44444)
-    measurement5 = Meassurment("Gas", "Home", "2013-12-12", 55555)
+    measurement1 = Water("Home", "1999-12-12", 11111)
+    measurement2 = Gas("Home", "2012-12-12", 26444)
+    measurement3 = Water("Work", "2013-12-12", 33333)
+    measurement4 = Electricity("Other", "2013-12-12", 44444)
+    measurement5 = Gas("Home", "2013-12-12", 22222)
 
     my_sm.sorted_insert(measurement1)
     my_sm.sorted_insert(measurement2)
